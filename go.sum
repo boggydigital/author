@@ -1,0 +1,10 @@
+github.com/boggydigital/busan v0.1.1 h1:sP0vbrgazePvThZZh0pQdn9BfWkvdQGTaQLF2YQliAo=
+github.com/boggydigital/busan v0.1.1/go.mod h1:aqtJoRSrX5bpQrA0nS7t7Btfl0qkolJ4pd+TNslKQmU=
+github.com/boggydigital/kevlar v0.6.9 h1:VX1M/F6ZrLxAslADkixcsYQ6HAnqRhwMuT12cikQDZM=
+github.com/boggydigital/kevlar v0.6.9/go.mod h1:wlHW4oa6bLm/xVlUoVYinsJKiitkaibBW9Diht46QPo=
+github.com/boggydigital/redux v0.1.9 h1:SSzyraDVaxNYSeWusNiOKx3e6wUGyO3WKvc07lupQvE=
+github.com/boggydigital/redux v0.1.9/go.mod h1:mI9586prkmJ00FPJn2fpqBVB3ViATnmgP6yfHq95C2I=
+github.com/boggydigital/wits v0.2.3 h1:Z0eB+QlIA18fJmblyV6ZJQ/swPYSFhOxfgMXOQz4/c8=
+github.com/boggydigital/wits v0.2.3/go.mod h1:aR/z0vfMLtg0b4hcts0qiSTZcA51O8A2N3U9laqd2Lc=
+golang.org/x/crypto v0.42.0 h1:chiH31gIWm57EkTXpwnqf8qeuMUi0yekh6mT2AvFlqI=
+golang.org/x/crypto v0.42.0/go.mod h1:4+rDnOTJhQCx2q7/j6rAN5XDw8kPjeaXEUR2eL94ix8=
