@@ -1,36 +1,17 @@
-package main
+package author
 
 import (
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/boggydigital/redux"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Permission int
-
 type Authenticator struct {
 	rdx             redux.Writeable
 	rolePermissions map[string][]Permission
-}
-
-const (
-	UsernamePasswordProperty = "username-password"
-	UsernameRoleProperty     = "username-role"
-	UsernameSessionProperty  = "username-session"
-	SessionStartedProperty   = "session-started"
-)
-
-func AllProperties() []string {
-	return []string{
-		UsernamePasswordProperty,
-		UsernameRoleProperty,
-		UsernameSessionProperty,
-		SessionStartedProperty,
-	}
 }
 
 func NewAuthenticator(dir string, rolePermissions map[string][]Permission) (*Authenticator, error) {
@@ -47,14 +28,6 @@ func NewAuthenticator(dir string, rolePermissions map[string][]Permission) (*Aut
 
 	return a, nil
 }
-
-var (
-	ErrUsernameExists           = errors.New("username already exists")
-	ErrUsernameNotFound         = errors.New("username not found")
-	ErrUsernamePasswordMissing  = errors.New("username is missing a password")
-	ErrUsernamePasswordMismatch = errors.New("username password mismatch")
-	ErrSessionExpired           = errors.New("session expired")
-)
 
 func (a *Authenticator) HasUser(username string) bool {
 	return a.rdx.HasKey(UsernamePasswordProperty, username)
@@ -177,39 +150,4 @@ func (a *Authenticator) CutSessions(username string) error {
 
 func (a *Authenticator) GetSessionPermissions(session string) ([]Permission, error) {
 	return nil, nil
-}
-
-func main() {
-	authDir := "/Users/bbrinza/Downloads"
-
-	at, err := NewAuthenticator(authDir, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	username := "user"
-
-	if !at.HasUser(username) {
-		if err = at.CreateUser(username, "password"); err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("user created")
-	}
-
-	// if err = at.CutSessions(username); err != nil {
-	// 	panic(err)
-	// }
-
-	if session, err := at.CreateSession(username, "password"); err != nil {
-		panic(err)
-	} else {
-
-		if err = at.RefreshSession(session); err != nil {
-			panic(err)
-		}
-
-		fmt.Println(session)
-	}
-
 }
