@@ -23,20 +23,12 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Printf("user created")
+		fmt.Println("user created")
 	}
-
-	// if err = at.CutSessions(username); err != nil {
-	// 	panic(err)
-	// }
 
 	if session, err := at.CreateSession(username, "password"); err != nil {
 		panic(err)
 	} else {
-
-		if err = at.RefreshSession(session); err != nil {
-			panic(err)
-		}
 
 		fmt.Println(session)
 	}

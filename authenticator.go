@@ -3,7 +3,7 @@ package author
 import (
 	"crypto/rand"
 	"errors"
-	"time"
+	"os"
 
 	"github.com/boggydigital/redux"
 	"golang.org/x/crypto/bcrypt"
@@ -15,6 +15,14 @@ type Authenticator struct {
 }
 
 func NewAuthenticator(dir string, rolePermissions map[string][]Permission) (*Authenticator, error) {
+
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err = os.MkdirAll(dir, 0755); err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
 
 	rdx, err := redux.NewWriter(dir, AllProperties()...)
 	if err != nil {
@@ -99,11 +107,6 @@ func (a *Authenticator) CreateSession(username, password string) (string, error)
 	}
 
 	session := rand.Text()
-	sessionStarted := time.Now().UTC().Format(time.RFC3339)
-
-	if err := a.rdx.ReplaceValues(SessionStartedProperty, session, sessionStarted); err != nil {
-		return "", err
-	}
 
 	if err := a.rdx.AddValues(UsernameSessionProperty, username, session); err != nil {
 		return "", err
@@ -115,34 +118,6 @@ func (a *Authenticator) CreateSession(username, password string) (string, error)
 const (
 	sessionExpirationDays = 30
 )
-
-func (a *Authenticator) RefreshSession(session string) error {
-
-	if sessionStarted, ok := a.rdx.GetLastVal(SessionStartedProperty, session); ok && sessionStarted != "" {
-
-		if sessionStartedTime, err := time.Parse(time.RFC3339, sessionStarted); err == nil {
-
-			if time.Now().UTC().After(sessionStartedTime.Add(sessionExpirationDays * 24 * time.Hour)) {
-
-				if err = a.rdx.CutKeys(SessionStartedProperty, session); err != nil {
-					return err
-				}
-
-				return ErrSessionExpired
-			}
-
-		} else {
-			return err
-		}
-
-	} else {
-		return ErrSessionExpired
-	}
-
-	sessionRestarted := time.Now().UTC().Format(time.RFC3339)
-
-	return a.rdx.ReplaceValues(SessionStartedProperty, session, sessionRestarted)
-}
 
 func (a *Authenticator) CutSessions(username string) error {
 	return a.rdx.CutKeys(UsernameSessionProperty, username)

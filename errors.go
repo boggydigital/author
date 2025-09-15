@@ -9,3 +9,7 @@ var (
 	ErrUsernamePasswordMismatch = errors.New("username password mismatch")
 	ErrSessionExpired           = errors.New("session expired")
 )
+
+func IsNotAuthenticated(err error) bool {
+	return errors.Is(err, ErrUsernamePasswordMismatch)
+}
