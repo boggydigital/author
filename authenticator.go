@@ -115,14 +115,30 @@ func (a *Authenticator) CreateSession(username, password string) (string, error)
 	return session, nil
 }
 
-const (
-	sessionExpirationDays = 30
-)
-
 func (a *Authenticator) CutSessions(username string) error {
 	return a.rdx.CutKeys(UsernameSessionProperty, username)
 }
 
 func (a *Authenticator) GetSessionPermissions(session string) ([]Permission, error) {
+
+	query := map[string][]string{UsernameSessionProperty: {session}}
+
+	for username := range a.rdx.Match(query, redux.FullMatch) {
+
+		permissions := make([]Permission, 0)
+
+		if roles, ok := a.rdx.GetAllValues(UsernameRoleProperty, username); ok {
+
+			for _, role := range roles {
+				if perms, sure := a.rolePermissions[role]; sure {
+					permissions = append(permissions, perms...)
+				}
+			}
+
+		}
+
+		return permissions, nil
+	}
+
 	return nil, nil
 }

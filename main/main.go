@@ -30,7 +30,12 @@ func main() {
 		panic(err)
 	} else {
 
-		fmt.Println(session)
+		if permissions, err := at.GetSessionPermissions(session); err != nil {
+			panic(err)
+		} else {
+
+			fmt.Println(permissions)
+		}
 	}
 
 }
