@@ -3,10 +3,16 @@ package author
 import (
 	"crypto/rand"
 	"errors"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/boggydigital/redux"
 	"golang.org/x/crypto/bcrypt"
+)
+
+const (
+	defaultSessionDurationDays = 90
 )
 
 type Authenticator struct {
@@ -112,7 +118,18 @@ func (a *Authenticator) CreateSession(username, password string) (string, error)
 		return "", err
 	}
 
+	if err := a.rdx.ReplaceValues(SessionCreatedProperty, session, time.Now().UTC().Format(http.TimeFormat)); err != nil {
+		return "", err
+	}
+
 	return session, nil
+}
+
+func (a *Authenticator) IsValidSession(session string) bool {
+
+	panic("Not implemented")
+
+	return false
 }
 
 func (a *Authenticator) CutSessions(username string) error {

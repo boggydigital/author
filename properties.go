@@ -4,6 +4,7 @@ const (
 	UsernamePasswordProperty = "username-password"
 	UsernameRoleProperty     = "username-role"
 	UsernameSessionProperty  = "username-session"
+	SessionCreatedProperty   = "session-created"
 )
 
 func AllProperties() []string {
@@ -11,5 +12,6 @@ func AllProperties() []string {
 		UsernamePasswordProperty,
 		UsernameRoleProperty,
 		UsernameSessionProperty,
+		SessionCreatedProperty,
 	}
 }
