@@ -125,14 +125,49 @@ func (a *Authenticator) CreateSession(username, password string) (string, error)
 	return session, nil
 }
 
-func (a *Authenticator) IsValidSession(session string) bool {
+func (a *Authenticator) ValidateSession(session string) error {
 
-	panic("Not implemented")
+	if scs, ok := a.rdx.GetLastVal(SessionCreatedProperty, session); ok && scs != "" {
 
-	return false
+		sct, err := http.ParseTime(scs)
+		if err != nil {
+			return err
+		}
+
+		// that's the only successful condition, otherwise the session is not valid
+		if sct.Add(defaultSessionDurationDays * time.Hour * 24).Before(time.Now().UTC()) {
+			return nil
+		}
+	}
+
+	if err := a.CutSession(session); err != nil {
+		return err
+	}
+
+	return ErrSessionExpired
 }
 
-func (a *Authenticator) CutSessions(username string) error {
+func (a *Authenticator) CutSession(session string) error {
+
+	query := map[string][]string{UsernameSessionProperty: {session}}
+
+	for username := range a.rdx.Match(query, redux.FullMatch) {
+		if err := a.rdx.CutValues(UsernameSessionProperty, username, session); err != nil {
+			return err
+		}
+	}
+
+	return a.rdx.CutKeys(SessionCreatedProperty, session)
+}
+
+func (a *Authenticator) CutUserSessions(username string) error {
+
+	if userSessions, ok := a.rdx.GetAllValues(UsernameSessionProperty, username); ok {
+		if err := a.rdx.CutKeys(SessionCreatedProperty, userSessions...); err != nil {
+			return err
+		}
+	}
+
 	return a.rdx.CutKeys(UsernameSessionProperty, username)
 }
 

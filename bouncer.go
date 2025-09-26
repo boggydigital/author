@@ -39,9 +39,12 @@ func Auth(b *Bouncer, next http.Handler) http.Handler {
 					continue
 				}
 
-				if b.author.IsValidSession(cookie.Value) {
-					next.ServeHTTP(w, r)
+				if err := b.author.ValidateSession(cookie.Value); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
 				}
+
+				next.ServeHTTP(w, r)
 
 			}
 		}
