@@ -24,7 +24,7 @@ func NewBouncer(dir string, rolePermissions map[string][]Permission, loginPath s
 	}, nil
 }
 
-func Auth(b *Bouncer, next http.Handler) http.Handler {
+func ValidateSession(b *Bouncer, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookieHeader := r.Header.Get("Cookie"); cookieHeader != "" {
 			cookies, err := http.ParseCookie(cookieHeader)

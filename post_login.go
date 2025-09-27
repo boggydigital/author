@@ -5,15 +5,12 @@ import (
 	"time"
 )
 
-func (b *Bouncer) PostLogin(w http.ResponseWriter, r *http.Request) {
+func (b *Bouncer) Authenticate(w http.ResponseWriter, r *http.Request) {
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	q := r.URL.Query()
 
-	if username := r.PostFormValue(UsernameParam); username != "" {
-		if password := r.PostFormValue(PasswordParam); password != "" {
+	if username := q.Get(UsernameParam); username != "" {
+		if password := q.Get(PasswordParam); password != "" {
 
 			if session, err := b.author.CreateSession(username, password); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -33,8 +30,9 @@ func (b *Bouncer) PostLogin(w http.ResponseWriter, r *http.Request) {
 				}
 
 				http.SetCookie(w, cookie)
-				return
+				http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 
+				return
 			}
 
 		}

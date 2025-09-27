@@ -67,7 +67,11 @@ func (a *Authenticator) CutUser(username, password string) error {
 		return err
 	}
 
-	return a.rdx.CutKeys(UsernamePasswordProperty, username)
+	if err := a.rdx.CutKeys(UsernamePasswordProperty, username); err != nil {
+		return err
+	}
+
+	return a.rdx.CutKeys(UsernameRoleProperty, username)
 }
 
 func (a *Authenticator) SetRole(username, password, role string) error {
@@ -76,7 +80,19 @@ func (a *Authenticator) SetRole(username, password, role string) error {
 		return err
 	}
 
-	return a.rdx.AddValues(UsernameRoleProperty, role)
+	return a.rdx.AddValues(UsernameRoleProperty, username, role)
+}
+
+func (a *Authenticator) GetUserRoles() map[string][]string {
+	userRoles := make(map[string][]string)
+
+	for username := range a.rdx.Keys(UsernameRoleProperty) {
+		if roles, ok := a.rdx.GetAllValues(UsernameRoleProperty, username); ok && len(roles) > 0 {
+			userRoles[username] = roles
+		}
+	}
+
+	return userRoles
 }
 
 func (a *Authenticator) Authenticate(username, password string) error {
