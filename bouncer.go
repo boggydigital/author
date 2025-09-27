@@ -1,6 +1,7 @@
 package author
 
 import (
+	"errors"
 	"net/http"
 	"time"
 )
@@ -29,6 +30,7 @@ func NewBouncer(dir string, rolePermissions map[string][]Permission, loginPath, 
 
 func ValidateSession(b *Bouncer, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 		if cookieHeader := r.Header.Get("Cookie"); cookieHeader != "" {
 			cookies, err := http.ParseCookie(cookieHeader)
 			if err != nil {
@@ -42,7 +44,10 @@ func ValidateSession(b *Bouncer, next http.Handler) http.Handler {
 					continue
 				}
 
-				if err = b.author.ValidateSession(cookie.Value); err != nil {
+				if err = b.author.ValidateSession(cookie.Value); errors.Is(err, ErrSessionExpired) {
+					http.Redirect(w, r, b.loginPath, http.StatusTemporaryRedirect)
+					return
+				} else if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
