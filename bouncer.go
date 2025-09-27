@@ -84,7 +84,7 @@ func (b *Bouncer) Authenticate(w http.ResponseWriter, r *http.Request) {
 				}
 
 				http.SetCookie(w, cookie)
-				//http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+				http.Redirect(w, r, b.successPath, http.StatusTemporaryRedirect)
 
 				return
 			}
