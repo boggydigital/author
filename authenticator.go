@@ -150,17 +150,22 @@ func (a *Authenticator) ValidateSession(session string) error {
 			return err
 		}
 
+		utcNow := time.Now().UTC()
+		sessionExpires := sct.Add(defaultSessionDurationDays * time.Hour * 24)
+
 		// that's the only successful condition, otherwise the session is not valid
-		if sct.Add(defaultSessionDurationDays * time.Hour * 24).Before(time.Now().UTC()) {
+		if utcNow.Before(sessionExpires) {
 			return nil
+		} else {
+			if err = a.CutSession(session); err != nil {
+				return err
+			}
+			return ErrSessionExpired
 		}
+
 	}
 
-	if err := a.CutSession(session); err != nil {
-		return err
-	}
-
-	return ErrSessionExpired
+	return ErrSessionNotValid
 }
 
 func (a *Authenticator) CutSession(session string) error {
