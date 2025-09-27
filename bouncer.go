@@ -44,7 +44,7 @@ func ValidateSession(b *Bouncer, next http.Handler) http.Handler {
 					continue
 				}
 
-				if err = b.author.ValidateSession(cookie.Value); errors.Is(err, ErrSessionExpired) {
+				if err = b.author.ValidateSession(cookie.Value); errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
 					http.Redirect(w, r, b.loginPath, http.StatusTemporaryRedirect)
 					return
 				} else if err != nil {
