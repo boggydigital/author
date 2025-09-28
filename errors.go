@@ -9,6 +9,7 @@ var (
 	ErrUsernamePasswordMismatch = errors.New("username password mismatch")
 	ErrSessionExpired           = errors.New("session expired")
 	ErrSessionNotValid          = errors.New("session is not valid")
+	ErrInsufficientPermissions  = errors.New("insufficient permissions")
 )
 
 func IsNotAuthenticated(err error) bool {

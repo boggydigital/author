@@ -8,27 +8,27 @@ import (
 
 const CookieKeySession = "Session"
 
-type Bouncer struct {
-	author      *Authenticator
+type SessionBouncer struct {
+	author      Authenticator
 	loginPath   string
 	successPath string
 }
 
-func NewBouncer(dir string, rolePermissions map[string][]Permission, loginPath, successPath string) (*Bouncer, error) {
+func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, loginPath, successPath string) (*SessionBouncer, error) {
 
 	author, err := NewAuthenticator(dir, rolePermissions)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Bouncer{
+	return &SessionBouncer{
 		author:      author,
 		loginPath:   loginPath,
 		successPath: successPath,
 	}, nil
 }
 
-func AuthenticateSession(b *Bouncer, next http.Handler) http.Handler {
+func AuthenticateSession(b *SessionBouncer, next http.Handler, requiredPermissions ...Permission) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		if cookieHeader := r.Header.Get("Cookie"); cookieHeader != "" {
@@ -44,7 +44,9 @@ func AuthenticateSession(b *Bouncer, next http.Handler) http.Handler {
 					continue
 				}
 
-				if err = b.author.ValidateSession(cookie.Value); errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
+				session := cookie.Value
+
+				if err = b.author.AuthenticateSession(session); errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
 					http.Redirect(w, r, b.loginPath, http.StatusTemporaryRedirect)
 					return
 				} else if err != nil {
@@ -52,8 +54,13 @@ func AuthenticateSession(b *Bouncer, next http.Handler) http.Handler {
 					return
 				}
 
-				next.ServeHTTP(w, r)
+				if err = b.author.MustHaveSessionPermissions(session, requiredPermissions...); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
 
+				next.ServeHTTP(w, r)
+				return
 			}
 		}
 
@@ -61,7 +68,7 @@ func AuthenticateSession(b *Bouncer, next http.Handler) http.Handler {
 	})
 }
 
-func (b *Bouncer) Authenticate(w http.ResponseWriter, r *http.Request) {
+func (b *SessionBouncer) AuthenticateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
