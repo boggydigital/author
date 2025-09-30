@@ -8,24 +8,41 @@ import (
 
 const CookieKeySession = "Session"
 
+const (
+	LoginPath   = "login"
+	SuccessPath = "success"
+)
+
 type SessionBouncer struct {
 	author      Authenticator
 	loginPath   string
 	successPath string
 }
 
-func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, loginPath, successPath string) (*SessionBouncer, error) {
+func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, paths map[string]string) (*SessionBouncer, error) {
 
 	author, err := NewAuthenticator(dir, rolePermissions)
 	if err != nil {
 		return nil, err
 	}
 
-	return &SessionBouncer{
-		author:      author,
-		loginPath:   loginPath,
-		successPath: successPath,
-	}, nil
+	sb := &SessionBouncer{
+		author: author,
+	}
+
+	if lp, ok := paths[LoginPath]; ok {
+		sb.loginPath = lp
+	} else {
+		return nil, errors.New("login path is required")
+	}
+
+	if sp, ok := paths[SuccessPath]; ok {
+		sb.successPath = sp
+	} else {
+		return nil, errors.New("success path is required")
+	}
+
+	return sb, nil
 }
 
 func AuthenticateSession(b *SessionBouncer, next http.Handler, requiredPermissions ...Permission) http.Handler {
