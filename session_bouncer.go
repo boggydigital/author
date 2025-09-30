@@ -2,6 +2,7 @@ package author
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"time"
 )
@@ -121,5 +122,31 @@ func (b *SessionBouncer) AuthenticateUser(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	http.Error(w, "Unauthorized access attempt detected", http.StatusUnauthorized)
+	http.Error(w, "Invalid username or password", http.StatusBadRequest)
+}
+
+func (b *SessionBouncer) AuthenticateApi(w http.ResponseWriter, r *http.Request) {
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if username := r.FormValue(UsernameParam); username != "" {
+		if password := r.FormValue(PasswordParam); password != "" {
+
+			if session, err := b.author.CreateSession(username, password); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			} else {
+				if _, err = io.WriteString(w, session); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				return
+			}
+		}
+	}
+
+	http.Error(w, "Invalid username or password", http.StatusBadRequest)
 }
