@@ -1,6 +1,8 @@
 package author
 
-import "time"
+import (
+	"time"
+)
 
 type Authenticator interface {
 	HasUser(username string) bool
@@ -11,7 +13,7 @@ type Authenticator interface {
 	AuthenticateUser(username, password string) error
 
 	CreateSession(username, password string) (string, error)
-	SessionExpiresUtc(session string) (time.Time, error)
+	SessionExpires(session string) (time.Time, error)
 	AuthenticateSession(session string) error
 	CutSession(session string) error
 	CutUserSessions(username string) error

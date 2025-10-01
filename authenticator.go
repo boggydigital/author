@@ -142,7 +142,7 @@ func (a *authenticator) CreateSession(username, password string) (string, error)
 	return session, nil
 }
 
-func (a *authenticator) SessionExpiresUtc(session string) (time.Time, error) {
+func (a *authenticator) SessionExpires(session string) (time.Time, error) {
 
 	if scs, ok := a.rdx.GetLastVal(SessionCreatedProperty, session); ok && scs != "" {
 

@@ -135,9 +135,9 @@ func AuthSessionToken(b *SessionBouncer, next http.Handler, requiredPermissions 
 	})
 }
 
-func (sb *SessionBouncer) AuthBrowserSession(w http.ResponseWriter, r *http.Request) {
+func (sb *SessionBouncer) AuthBrowserUsernamePassword(w http.ResponseWriter, r *http.Request) {
 
-	if ste, err := sb.authSession(r); errors.Is(err, ErrUsernamePasswordMissing) ||
+	if ste, err := sb.authUsernamePassword(r); errors.Is(err, ErrUsernamePasswordMissing) ||
 		errors.Is(err, ErrUsernamePasswordMismatch) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -161,9 +161,9 @@ func (sb *SessionBouncer) AuthBrowserSession(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (sb *SessionBouncer) AuthApiSession(w http.ResponseWriter, r *http.Request) {
+func (sb *SessionBouncer) AuthApiUsernamePassword(w http.ResponseWriter, r *http.Request) {
 
-	if ste, err := sb.authSession(r); errors.Is(err, ErrUsernamePasswordMissing) ||
+	if ste, err := sb.authUsernamePassword(r); errors.Is(err, ErrUsernamePasswordMissing) ||
 		errors.Is(err, ErrUsernamePasswordMismatch) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -181,7 +181,26 @@ func (sb *SessionBouncer) AuthApiSession(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (sb *SessionBouncer) authSession(r *http.Request) (*SessionTokenExpires, error) {
+func (sb *SessionBouncer) AuthApiSession(w http.ResponseWriter, r *http.Request) {
+	if ste, err := sb.authSession(r); errors.Is(err, ErrSessionNotValid) ||
+		errors.Is(err, ErrSessionExpired) {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	} else {
+		w.Header().Set("Content-Type", applicationJsonContentType)
+
+		if err = json.NewEncoder(w).Encode(ste); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		return
+	}
+}
+
+func (sb *SessionBouncer) authUsernamePassword(r *http.Request) (*SessionTokenExpires, error) {
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
@@ -193,15 +212,15 @@ func (sb *SessionBouncer) authSession(r *http.Request) (*SessionTokenExpires, er
 				return nil, err
 			} else {
 
-				var seu time.Time
-				seu, err = sb.author.SessionExpiresUtc(sessionToken)
+				var sessionExpires time.Time
+				sessionExpires, err = sb.author.SessionExpires(sessionToken)
 				if err != nil {
 					return nil, err
 				}
 
 				ste := &SessionTokenExpires{
 					Token:   sessionToken,
-					Expires: seu,
+					Expires: sessionExpires,
 				}
 
 				return ste, nil
@@ -210,4 +229,31 @@ func (sb *SessionBouncer) authSession(r *http.Request) (*SessionTokenExpires, er
 	}
 
 	return nil, ErrUsernamePasswordMissing
+}
+
+func (sb *SessionBouncer) authSession(r *http.Request) (*SessionTokenExpires, error) {
+	if err := r.ParseForm(); err != nil {
+		return nil, err
+	}
+
+	if sessionToken := r.FormValue(SessionParam); sessionToken != "" {
+
+		if err := sb.author.AuthenticateSession(sessionToken); err != nil {
+			return nil, err
+		}
+
+		sessionExpires, err := sb.author.SessionExpires(sessionToken)
+		if err != nil {
+			return nil, err
+		}
+
+		ste := &SessionTokenExpires{
+			Token:   sessionToken,
+			Expires: sessionExpires,
+		}
+
+		return ste, nil
+	}
+
+	return nil, ErrSessionNotValid
 }
