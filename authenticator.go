@@ -142,6 +142,23 @@ func (a *authenticator) CreateSession(username, password string) (string, error)
 	return session, nil
 }
 
+func (a *authenticator) SessionExpiresUtc(session string) (time.Time, error) {
+
+	if scs, ok := a.rdx.GetLastVal(SessionCreatedProperty, session); ok && scs != "" {
+
+		sct, err := http.ParseTime(scs)
+		if err != nil {
+			return time.Time{}, err
+		}
+
+		sessionExpires := sct.Add(defaultSessionDurationDays * time.Hour * 24)
+		return sessionExpires, nil
+
+	}
+
+	return time.Time{}, ErrSessionNotValid
+}
+
 func (a *authenticator) AuthenticateSession(session string) error {
 
 	if scs, ok := a.rdx.GetLastVal(SessionCreatedProperty, session); ok && scs != "" {
