@@ -232,28 +232,25 @@ func (sb *SessionBouncer) authUsernamePassword(r *http.Request) (*SessionTokenEx
 }
 
 func (sb *SessionBouncer) authSession(r *http.Request) (*SessionTokenExpires, error) {
-	if err := r.ParseForm(); err != nil {
+
+	sessionToken, err := authorizationBearerToken(r)
+	if err != nil {
 		return nil, err
 	}
 
-	if sessionToken := r.FormValue(SessionParam); sessionToken != "" {
-
-		if err := sb.author.AuthenticateSession(sessionToken); err != nil {
-			return nil, err
-		}
-
-		sessionExpires, err := sb.author.SessionExpires(sessionToken)
-		if err != nil {
-			return nil, err
-		}
-
-		ste := &SessionTokenExpires{
-			Token:   sessionToken,
-			Expires: sessionExpires,
-		}
-
-		return ste, nil
+	if err = sb.author.AuthenticateSession(sessionToken); err != nil {
+		return nil, err
 	}
 
-	return nil, ErrSessionNotValid
+	sessionExpires, err := sb.author.SessionExpires(sessionToken)
+	if err != nil {
+		return nil, err
+	}
+
+	ste := &SessionTokenExpires{
+		Token:   sessionToken,
+		Expires: sessionExpires,
+	}
+
+	return ste, nil
 }
