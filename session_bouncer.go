@@ -256,3 +256,21 @@ func (sb *SessionBouncer) authSession(r *http.Request) (*SessionTokenExpires, er
 
 	return ste, nil
 }
+
+func (sb *SessionBouncer) DeauthSession(w http.ResponseWriter, r *http.Request) {
+
+	sessionToken, err := cookieSessionOrAuthorizationBearerToken(r)
+	if errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
+		// do nothing, session already invalid
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = sb.author.CutSession(sessionToken); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
