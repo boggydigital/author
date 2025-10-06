@@ -85,34 +85,38 @@ func authorizationBearerToken(r *http.Request) (string, error) {
 	return "", ErrSessionNotValid
 }
 
+func cookieSessionOrAuthorizationBearerToken(r *http.Request) (string, error) {
+
+	if st, err := cookieSessionToken(r); errors.Is(err, ErrSessionExpired) ||
+		errors.Is(err, ErrSessionNotValid) {
+
+		var abt string
+		if abt, err = authorizationBearerToken(r); err != nil {
+			return "", err
+		} else {
+			return abt, nil
+		}
+
+	} else if err != nil {
+		return "", err
+	} else {
+		return st, nil
+	}
+}
+
 func AuthSessionToken(sb *SessionBouncer, next http.Handler, requiredPermissions ...Permission) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		var sessionToken string
-
-		if st, err := cookieSessionToken(r); errors.Is(err, ErrSessionExpired) ||
-			errors.Is(err, ErrSessionNotValid) {
-
-			var abt string
-			if abt, err = authorizationBearerToken(r); errors.Is(err, ErrSessionExpired) ||
-				errors.Is(err, ErrSessionNotValid) {
-				http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
-				return
-			} else if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			} else {
-				sessionToken = abt
-			}
-
+		sessionToken, err := cookieSessionOrAuthorizationBearerToken(r)
+		if errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
+			http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
+			return
 		} else if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-		} else {
-			sessionToken = st
 		}
 
-		if err := sb.author.AuthenticateSession(sessionToken); errors.Is(err, ErrSessionExpired) ||
+		if err = sb.author.AuthenticateSession(sessionToken); errors.Is(err, ErrSessionExpired) ||
 			errors.Is(err, ErrSessionNotValid) {
 			http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
 			return
