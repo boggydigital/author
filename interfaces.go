@@ -5,11 +5,11 @@ import (
 )
 
 type Authenticator interface {
-	HasUser(username string) bool
+	HasUser(username string) (bool, error)
 	CreateUser(username, password string) error
 	CutUser(username, password string) error
 	GrantRole(username, password, role string) error
-	GetUserRoles() map[string][]string
+	GetUserRoles() (map[string][]string, error)
 	AuthenticateUser(username, password string) error
 
 	CreateSession(username, password string) (string, error)

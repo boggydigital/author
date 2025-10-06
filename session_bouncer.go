@@ -85,7 +85,7 @@ func authorizationBearerToken(r *http.Request) (string, error) {
 	return "", ErrSessionNotValid
 }
 
-func AuthSessionToken(b *SessionBouncer, next http.Handler, requiredPermissions ...Permission) http.Handler {
+func AuthSessionToken(sb *SessionBouncer, next http.Handler, requiredPermissions ...Permission) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		var sessionToken string
@@ -96,7 +96,7 @@ func AuthSessionToken(b *SessionBouncer, next http.Handler, requiredPermissions 
 			var abt string
 			if abt, err = authorizationBearerToken(r); errors.Is(err, ErrSessionExpired) ||
 				errors.Is(err, ErrSessionNotValid) {
-				http.Redirect(w, r, b.loginPath, http.StatusTemporaryRedirect)
+				http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
 				return
 			} else if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -112,16 +112,16 @@ func AuthSessionToken(b *SessionBouncer, next http.Handler, requiredPermissions 
 			sessionToken = st
 		}
 
-		if err := b.author.AuthenticateSession(sessionToken); errors.Is(err, ErrSessionExpired) ||
+		if err := sb.author.AuthenticateSession(sessionToken); errors.Is(err, ErrSessionExpired) ||
 			errors.Is(err, ErrSessionNotValid) {
-			http.Redirect(w, r, b.loginPath, http.StatusTemporaryRedirect)
+			http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
 			return
 		} else if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else {
 
-			if err = b.author.MustHaveSessionPermissions(sessionToken, requiredPermissions...); err != nil {
+			if err = sb.author.MustHaveSessionPermissions(sessionToken, requiredPermissions...); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}

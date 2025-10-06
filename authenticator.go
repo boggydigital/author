@@ -44,11 +44,24 @@ func NewAuthenticator(dir string, rolePermissions map[string][]Permission) (Auth
 	return a, nil
 }
 
-func (a *authenticator) HasUser(username string) bool {
-	return a.rdx.HasKey(UsernamePasswordProperty, username)
+func (a *authenticator) HasUser(username string) (bool, error) {
+
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return false, err
+	}
+
+	return a.rdx.HasKey(UsernamePasswordProperty, username), nil
 }
 
 func (a *authenticator) CreateUser(username, password string) error {
+
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return err
+	}
 
 	if a.rdx.HasKey(UsernamePasswordProperty, username) {
 		return ErrUsernameExists
@@ -84,7 +97,14 @@ func (a *authenticator) GrantRole(username, password, role string) error {
 	return a.rdx.AddValues(UsernameRoleProperty, username, role)
 }
 
-func (a *authenticator) GetUserRoles() map[string][]string {
+func (a *authenticator) GetUserRoles() (map[string][]string, error) {
+
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return nil, err
+	}
+
 	userRoles := make(map[string][]string)
 
 	for username := range a.rdx.Keys(UsernameRoleProperty) {
@@ -93,10 +113,16 @@ func (a *authenticator) GetUserRoles() map[string][]string {
 		}
 	}
 
-	return userRoles
+	return userRoles, nil
 }
 
 func (a *authenticator) AuthenticateUser(username, password string) error {
+
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return err
+	}
 
 	if !a.rdx.HasKey(UsernamePasswordProperty, username) {
 		return ErrUsernameNotFound
@@ -144,6 +170,12 @@ func (a *authenticator) CreateSession(username, password string) (string, error)
 
 func (a *authenticator) SessionExpires(session string) (time.Time, error) {
 
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return time.Time{}, err
+	}
+
 	if scs, ok := a.rdx.GetLastVal(SessionCreatedProperty, session); ok && scs != "" {
 
 		sct, err := http.ParseTime(scs)
@@ -160,6 +192,12 @@ func (a *authenticator) SessionExpires(session string) (time.Time, error) {
 }
 
 func (a *authenticator) AuthenticateSession(session string) error {
+
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return err
+	}
 
 	if scs, ok := a.rdx.GetLastVal(SessionCreatedProperty, session); ok && scs != "" {
 
@@ -188,6 +226,12 @@ func (a *authenticator) AuthenticateSession(session string) error {
 
 func (a *authenticator) CutSession(session string) error {
 
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return err
+	}
+
 	query := map[string][]string{UsernameSessionProperty: {session}}
 
 	for username := range a.rdx.Match(query, redux.FullMatch) {
@@ -201,8 +245,14 @@ func (a *authenticator) CutSession(session string) error {
 
 func (a *authenticator) CutUserSessions(username string) error {
 
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return err
+	}
+
 	if userSessions, ok := a.rdx.GetAllValues(UsernameSessionProperty, username); ok {
-		if err := a.rdx.CutKeys(SessionCreatedProperty, userSessions...); err != nil {
+		if err = a.rdx.CutKeys(SessionCreatedProperty, userSessions...); err != nil {
 			return err
 		}
 	}
@@ -211,6 +261,12 @@ func (a *authenticator) CutUserSessions(username string) error {
 }
 
 func (a *authenticator) GetSessionPermissions(session string) ([]Permission, error) {
+
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return nil, err
+	}
 
 	query := map[string][]string{UsernameSessionProperty: {session}}
 
