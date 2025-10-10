@@ -12,23 +12,17 @@ const applicationJsonContentType = "application/json"
 
 const CookieKeySession = "Session"
 
-const (
-	LoginPath   = "login"
-	SuccessPath = "success"
-)
-
 type SessionTokenExpires struct {
 	Token   string    `json:"token"`
 	Expires time.Time `json:"expires"`
 }
 
 type SessionBouncer struct {
-	author      Authenticator
-	loginPath   string
-	successPath string
+	author    Authenticator
+	loginPath string
 }
 
-func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, paths map[string]string) (*SessionBouncer, error) {
+func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, loginPath string) (*SessionBouncer, error) {
 
 	author, err := NewAuthenticator(dir, rolePermissions)
 	if err != nil {
@@ -39,16 +33,11 @@ func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, path
 		author: author,
 	}
 
-	if lp, ok := paths[LoginPath]; ok {
-		sb.loginPath = lp
-	} else {
+	switch loginPath {
+	case "":
 		return nil, errors.New("login path is required")
-	}
-
-	if sp, ok := paths[SuccessPath]; ok {
-		sb.successPath = sp
-	} else {
-		return nil, errors.New("success path is required")
+	default:
+		sb.loginPath = loginPath
 	}
 
 	return sb, nil
@@ -158,7 +147,10 @@ func (sb *SessionBouncer) AuthBrowserUsernamePassword(w http.ResponseWriter, r *
 		}
 
 		http.SetCookie(w, cookie)
-		http.Redirect(w, r, sb.successPath, http.StatusTemporaryRedirect)
+		w.Header().Set("Location", "/")
+
+		w.WriteHeader(http.StatusSeeOther)
+
 		return
 	}
 }
