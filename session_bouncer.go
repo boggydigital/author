@@ -266,3 +266,13 @@ func (sb *SessionBouncer) DeauthSession(w http.ResponseWriter, r *http.Request) 
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
+
+func (sb *SessionBouncer) GetPermissions(r *http.Request) ([]Permission, error) {
+
+	sessionToken, err := cookieSessionOrAuthorizationBearerToken(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return sb.author.GetSessionPermissions(sessionToken)
+}
