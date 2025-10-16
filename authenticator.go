@@ -85,6 +85,16 @@ func (a *authenticator) CutUser(username, password string) error {
 		return err
 	}
 
+	if sessions, ok := a.rdx.GetAllValues(UsernameSessionProperty, username); ok && len(sessions) > 0 {
+		if err := a.rdx.CutKeys(SessionCreatedProperty, sessions...); err != nil {
+			return err
+		}
+	}
+
+	if err := a.rdx.CutKeys(UsernameSessionProperty, username); err != nil {
+		return err
+	}
+
 	return a.rdx.CutKeys(UsernameRoleProperty, username)
 }
 
