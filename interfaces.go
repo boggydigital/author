@@ -8,6 +8,7 @@ type Authenticator interface {
 	HasUser(username string) (bool, error)
 	CreateUser(username, password string) error
 	CutUser(username, password string) error
+	UpdatePassword(username, currentPassword, newPassword string) error
 	SetRole(username, password, role string) error
 	GetUserRoles() (map[string][]string, error)
 	AuthenticateUser(username, password string) error
