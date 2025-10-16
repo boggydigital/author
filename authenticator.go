@@ -75,6 +75,24 @@ func (a *authenticator) CreateUser(username, password string) error {
 	return a.rdx.AddValues(UsernamePasswordProperty, username, string(hashedPassword))
 }
 
+func (a *authenticator) UpdatePassword(username, currentPassword, newPassword string) error {
+
+	if err := a.AuthenticateUser(username, currentPassword); err != nil {
+		return err
+	}
+
+	if !a.rdx.HasKey(UsernamePasswordProperty, username) {
+		return ErrUsernameNotFound
+	}
+
+	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	return a.rdx.ReplaceValues(UsernamePasswordProperty, username, string(hashedNewPassword))
+}
+
 func (a *authenticator) CutUser(username, password string) error {
 
 	if err := a.AuthenticateUser(username, password); err != nil {
@@ -98,13 +116,13 @@ func (a *authenticator) CutUser(username, password string) error {
 	return a.rdx.CutKeys(UsernameRoleProperty, username)
 }
 
-func (a *authenticator) GrantRole(username, password, role string) error {
+func (a *authenticator) SetRole(username, password, role string) error {
 
 	if err := a.AuthenticateUser(username, password); err != nil {
 		return err
 	}
 
-	return a.rdx.AddValues(UsernameRoleProperty, username, role)
+	return a.rdx.ReplaceValues(UsernameRoleProperty, username, role)
 }
 
 func (a *authenticator) GetUserRoles() (map[string][]string, error) {
