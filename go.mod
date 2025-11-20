@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/boggydigital/redux v0.1.9
-	golang.org/x/crypto v0.43.0
+	golang.org/x/crypto v0.45.0
 )
 
 require (
