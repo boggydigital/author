@@ -158,7 +158,7 @@ func (a *authenticator) AuthenticateUser(username, password string) error {
 
 	if ph, ok := a.rdx.GetLastVal(UsernamePasswordProperty, username); ok {
 
-		if err := bcrypt.CompareHashAndPassword([]byte(ph), []byte(password)); err != nil {
+		if err = bcrypt.CompareHashAndPassword([]byte(ph), []byte(password)); err != nil {
 			if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 				return ErrUsernamePasswordMismatch
 			} else {
@@ -180,12 +180,18 @@ func (a *authenticator) CreateSession(username, password string) (string, error)
 	}
 
 	if existingSession, ok := a.rdx.GetLastVal(UsernameSessionProperty, username); ok && existingSession != "" {
+
 		sessionExpires, err := a.SessionExpires(existingSession)
 		if err != nil {
 			return "", err
 		}
+
 		if isUtcFuture(sessionExpires) {
 			return existingSession, nil
+		} else {
+			if err = a.CutSession(existingSession); err != nil {
+				return "", err
+			}
 		}
 	}
 
