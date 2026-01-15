@@ -180,7 +180,13 @@ func (a *authenticator) CreateSession(username, password string) (string, error)
 	}
 
 	if existingSession, ok := a.rdx.GetLastVal(UsernameSessionProperty, username); ok && existingSession != "" {
-		return existingSession, nil
+		sessionExpires, err := a.SessionExpires(existingSession)
+		if err != nil {
+			return "", err
+		}
+		if isUtcFuture(sessionExpires) {
+			return existingSession, nil
+		}
 	}
 
 	session := rand.Text()
@@ -206,7 +212,8 @@ func (a *authenticator) SessionExpires(session string) (time.Time, error) {
 
 	if scs, ok := a.rdx.GetLastVal(SessionCreatedProperty, session); ok && scs != "" {
 
-		sct, err := http.ParseTime(scs)
+		var sct time.Time
+		sct, err = http.ParseTime(scs)
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -227,29 +234,28 @@ func (a *authenticator) AuthenticateSession(session string) error {
 		return err
 	}
 
-	if scs, ok := a.rdx.GetLastVal(SessionCreatedProperty, session); ok && scs != "" {
-
-		sct, err := http.ParseTime(scs)
-		if err != nil {
-			return err
-		}
-
-		utcNow := time.Now().UTC()
-		sessionExpires := sct.Add(defaultSessionDurationDays * time.Hour * 24)
-
-		// that's the only successful condition, otherwise the session is not valid
-		if utcNow.Before(sessionExpires) {
-			return nil
-		} else {
-			if err = a.CutSession(session); err != nil {
-				return err
-			}
-			return ErrSessionExpired
-		}
-
+	sessionExpires, err := a.SessionExpires(session)
+	if err != nil {
+		return err
 	}
 
-	return ErrSessionNotValid
+	// that's the only successful condition, otherwise the session is not valid
+	if isUtcFuture(sessionExpires) {
+		return nil
+	} else {
+		if err = a.CutSession(session); err != nil {
+			return err
+		}
+		return ErrSessionExpired
+	}
+}
+
+func isUtcFuture(t time.Time) bool {
+	if time.Now().UTC().Before(t) {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (a *authenticator) CutSession(session string) error {
@@ -263,7 +269,7 @@ func (a *authenticator) CutSession(session string) error {
 	query := map[string][]string{UsernameSessionProperty: {session}}
 
 	for username := range a.rdx.Match(query, redux.FullMatch) {
-		if err := a.rdx.CutValues(UsernameSessionProperty, username, session); err != nil {
+		if err = a.rdx.CutValues(UsernameSessionProperty, username, session); err != nil {
 			return err
 		}
 	}
