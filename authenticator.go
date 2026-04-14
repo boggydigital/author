@@ -14,6 +14,8 @@ import (
 
 const (
 	defaultSessionDurationDays = 90
+
+	SessionNearExpirationHours = 24
 )
 
 type authenticator struct {
@@ -187,7 +189,13 @@ func (a *authenticator) CreateSession(username, password string) (string, error)
 		}
 
 		if isUtcFuture(sessionExpires) {
-			return existingSession, nil
+			if isSessionNearExpiration(sessionExpires) {
+				if err = a.CutSession(existingSession); err != nil {
+					return "", err
+				}
+			} else {
+				return existingSession, nil
+			}
 		} else {
 			if err = a.CutSession(existingSession); err != nil {
 				return "", err
@@ -262,6 +270,10 @@ func isUtcFuture(t time.Time) bool {
 	} else {
 		return false
 	}
+}
+
+func isSessionNearExpiration(t time.Time) bool {
+	return t.Sub(time.Now().UTC()) <= time.Hour*SessionNearExpirationHours
 }
 
 func (a *authenticator) CutSession(session string) error {
