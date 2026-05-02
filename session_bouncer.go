@@ -74,30 +74,11 @@ func authorizationBearerToken(r *http.Request) (string, error) {
 	return "", ErrSessionNotValid
 }
 
-func cookieSessionOrAuthorizationBearerToken(r *http.Request) (string, error) {
-
-	if st, err := cookieSessionToken(r); errors.Is(err, ErrSessionExpired) ||
-		errors.Is(err, ErrSessionNotValid) {
-
-		var abt string
-		if abt, err = authorizationBearerToken(r); err != nil {
-			return "", err
-		} else {
-			return abt, nil
-		}
-
-	} else if err != nil {
-		return "", err
-	} else {
-		return st, nil
-	}
-}
-
-func AuthSessionToken(sb *SessionBouncer, next http.Handler, requiredPermissions ...Permission) http.Handler {
+func AuthSessionCookie(sb *SessionBouncer, next http.Handler, requiredPermissions ...Permission) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		sessionToken, err := cookieSessionOrAuthorizationBearerToken(r)
-		if errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
+		sessionToken, err := cookieSessionToken(r)
+		if errors.Is(err, ErrSessionNotValid) {
 			http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
 			return
 		} else if err != nil {
@@ -105,25 +86,47 @@ func AuthSessionToken(sb *SessionBouncer, next http.Handler, requiredPermissions
 			return
 		}
 
-		if err = sb.author.AuthenticateSession(sessionToken); errors.Is(err, ErrSessionExpired) ||
-			errors.Is(err, ErrSessionNotValid) {
+		if err = sb.authSessionToken(sessionToken, requiredPermissions...); errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
 			http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
 			return
 		} else if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-		} else {
-
-			if err = sb.author.MustHaveSessionPermissions(sessionToken, requiredPermissions...); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-			return
 		}
 
+		next.ServeHTTP(w, r)
+		return
 	})
+}
+
+func AuthSessionBearer(sb *SessionBouncer, next http.Handler, requiredPermissions ...Permission) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		sessionToken, err := authorizationBearerToken(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		if err = sb.authSessionToken(sessionToken, requiredPermissions...); err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+		return
+	})
+}
+
+func (sb *SessionBouncer) authSessionToken(sessionToken string, requiredPermissions ...Permission) error {
+	if err := sb.author.AuthenticateSession(sessionToken); err != nil {
+		return err
+	} else {
+		if err = sb.author.MustHaveSessionPermissions(sessionToken, requiredPermissions...); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (sb *SessionBouncer) AuthBrowserUsernamePassword(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +179,8 @@ func (sb *SessionBouncer) AuthApiUsernamePassword(w http.ResponseWriter, r *http
 }
 
 func (sb *SessionBouncer) AuthApiSession(w http.ResponseWriter, r *http.Request) {
-	if ste, err := sb.authSession(r); errors.Is(err, ErrSessionNotValid) ||
+
+	if ste, err := sb.authSessionBearer(r); errors.Is(err, ErrSessionNotValid) ||
 		errors.Is(err, ErrSessionExpired) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -225,7 +229,7 @@ func (sb *SessionBouncer) authUsernamePassword(r *http.Request) (*SessionTokenEx
 	return nil, ErrUsernamePasswordMissing
 }
 
-func (sb *SessionBouncer) authSession(r *http.Request) (*SessionTokenExpires, error) {
+func (sb *SessionBouncer) authSessionBearer(r *http.Request) (*SessionTokenExpires, error) {
 
 	sessionToken, err := authorizationBearerToken(r)
 	if err != nil {
@@ -249,9 +253,9 @@ func (sb *SessionBouncer) authSession(r *http.Request) (*SessionTokenExpires, er
 	return ste, nil
 }
 
-func (sb *SessionBouncer) DeauthSession(w http.ResponseWriter, r *http.Request) {
+func (sb *SessionBouncer) DeauthCookieSession(w http.ResponseWriter, r *http.Request) {
 
-	sessionToken, err := cookieSessionOrAuthorizationBearerToken(r)
+	sessionToken, err := cookieSessionToken(r)
 	if errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
 		// do nothing, session already invalid
 	} else if err != nil {
@@ -267,9 +271,36 @@ func (sb *SessionBouncer) DeauthSession(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-func (sb *SessionBouncer) GetPermissions(r *http.Request) ([]Permission, error) {
+func (sb *SessionBouncer) DeauthSessionBearer(w http.ResponseWriter, r *http.Request) {
 
-	sessionToken, err := cookieSessionOrAuthorizationBearerToken(r)
+	sessionToken, err := authorizationBearerToken(r)
+	if errors.Is(err, ErrSessionExpired) || errors.Is(err, ErrSessionNotValid) {
+		// do nothing, session already invalid
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = sb.author.CutSession(sessionToken); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func (sb *SessionBouncer) GetCookiePermissions(r *http.Request) ([]Permission, error) {
+
+	sessionToken, err := cookieSessionToken(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return sb.author.GetSessionPermissions(sessionToken)
+}
+
+func (sb *SessionBouncer) GetBearerPermissions(r *http.Request) ([]Permission, error) {
+	sessionToken, err := authorizationBearerToken(r)
 	if err != nil {
 		return nil, err
 	}
