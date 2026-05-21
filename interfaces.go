@@ -5,6 +5,7 @@ import (
 )
 
 type Authenticator interface {
+	MustHaveUsers() error
 	HasUser(username string) (bool, error)
 	CreateUser(username, password string) error
 	CutUser(username, password string) error

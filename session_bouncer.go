@@ -79,7 +79,7 @@ func AuthSessionCookie(sb *SessionBouncer, next http.Handler, requiredPermission
 
 		sessionToken, err := cookieSessionToken(r)
 		if errors.Is(err, ErrSessionNotValid) {
-			http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
+			http.Redirect(w, r, sb.loginPath, http.StatusUnauthorized)
 			return
 		} else if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -116,6 +116,10 @@ func AuthSessionBearer(sb *SessionBouncer, next http.Handler, requiredPermission
 		next.ServeHTTP(w, r)
 		return
 	})
+}
+
+func (sb *SessionBouncer) MustHaveUsers() error {
+	return sb.author.MustHaveUsers()
 }
 
 func (sb *SessionBouncer) authSessionToken(sessionToken string, requiredPermissions ...Permission) error {

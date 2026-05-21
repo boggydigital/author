@@ -23,6 +23,8 @@ type authenticator struct {
 	rolePermissions map[string][]Permission
 }
 
+var ErrNoUsers = errors.New("no users found")
+
 func NewAuthenticator(dir string, rolePermissions map[string][]Permission) (Authenticator, error) {
 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -44,6 +46,20 @@ func NewAuthenticator(dir string, rolePermissions map[string][]Permission) (Auth
 	}
 
 	return a, nil
+}
+
+func (a *authenticator) MustHaveUsers() error {
+	var err error
+	a.rdx, err = a.rdx.RefreshWriter()
+	if err != nil {
+		return err
+	}
+
+	for range a.rdx.Keys(UsernamePasswordProperty) {
+		return nil
+	}
+
+	return ErrNoUsers
 }
 
 func (a *authenticator) HasUser(username string) (bool, error) {
