@@ -79,7 +79,7 @@ func AuthSessionCookie(sb *SessionBouncer, next http.Handler, requiredPermission
 
 		sessionToken, err := cookieSessionToken(r)
 		if errors.Is(err, ErrSessionNotValid) {
-			http.Redirect(w, r, sb.loginPath, http.StatusUnauthorized)
+			http.Redirect(w, r, sb.loginPath, http.StatusTemporaryRedirect)
 			return
 		} else if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
