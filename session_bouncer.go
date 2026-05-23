@@ -18,11 +18,12 @@ type SessionTokenExpires struct {
 }
 
 type SessionBouncer struct {
-	author    Authenticator
-	loginPath string
+	author          Authenticator
+	loginPath       string
+	insecureCookies bool
 }
 
-func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, loginPath string) (*SessionBouncer, error) {
+func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, loginPath string, insecureCookies bool) (*SessionBouncer, error) {
 
 	author, err := NewAuthenticator(dir, rolePermissions)
 	if err != nil {
@@ -30,7 +31,8 @@ func NewSessionBouncer(dir string, rolePermissions map[string][]Permission, logi
 	}
 
 	sb := &SessionBouncer{
-		author: author,
+		author:          author,
+		insecureCookies: insecureCookies,
 	}
 
 	switch loginPath {
@@ -147,7 +149,7 @@ func (sb *SessionBouncer) AuthBrowserUsernamePassword(w http.ResponseWriter, r *
 			Name:        CookieKeySession,
 			Value:       ste.Token,
 			Expires:     ste.Expires,
-			Secure:      true,
+			Secure:      !sb.insecureCookies,
 			HttpOnly:    true,
 			SameSite:    http.SameSiteStrictMode,
 			Partitioned: false,
