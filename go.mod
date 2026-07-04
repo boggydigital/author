@@ -1,13 +1,14 @@
 module github.com/boggydigital/author
 
-go 1.25.5
+go 1.26.3
 
 require (
-	github.com/boggydigital/redux v0.1.11
-	golang.org/x/crypto v0.46.0
+	github.com/boggydigital/redux v0.1.12
+	golang.org/x/crypto v0.53.0
 )
 
 require (
-	github.com/boggydigital/kevlar v0.6.10 // indirect
-	github.com/boggydigital/pathways v0.2.1 // indirect
+	github.com/boggydigital/camino v0.2.13 // indirect
+	github.com/boggydigital/kevlar v0.6.13 // indirect
+	golang.org/x/net v0.56.0 // indirect
 )
